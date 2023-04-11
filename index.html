@@ -17,6 +17,7 @@
   </head>
   <body>
     <ul id="messages"></ul>
+    <p id="typing"></p>
     <form id="form" action="">
       <input id="input" autocomplete="off" />
       <button>Send</button>
@@ -25,15 +26,41 @@
     <script src='/socket.io/socket.io.js'></script>
     <script>
       const socket = io();
+      let typing = false;
+      let timeout = undefined;
+
       const messages = document.getElementById('messages');
       const input = document.getElementById('input');
       const form = document.getElementById('form');
+      const typingElement = document.getElementById('typing');
+
+      function typingTimeout(){
+        typing = false
+        socket.emit('typing', typing)
+      }
+
+      function onSubmit() {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+
+      input.addEventListener('keypress', (e) => {
+        if (e.which !== 13) {
+          typing = true
+          socket.emit('typing', typing)
+          clearTimeout(timeout)
+          timeout = setTimeout(typingTimeout, 3000)
+        } else {
+          clearTimeout(timeout);
+          typingTimeout();
+          onSubmit();
+        }
+      })
 
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         if (input.value) {
-          socket.emit('chat message', input.value);
-          input.value = '';
+          onSubmit();
         }
       });
 
@@ -44,6 +71,13 @@
           window.scrollTo(0, document.body.scrollHeight);
       });
 
+      socket.on('typing', (typing) => {
+        if (typing) {
+          typingElement.innerText = "Sedang mengetik..."
+        } else {
+          typingElement.innerText = ""
+        }
+      })
     </script>
   </body>
 </html>
